@@ -94,6 +94,7 @@ class Cuota(object):
 
     def __hash__(self):
         return hash((self.numero, self.monto))
+        
 
 # EVALUACION
 
@@ -199,4 +200,3 @@ def cargar_datos(gc, gp):
     p1.cambiar_estado("APROBADO")
     p1.generar_cronograma()
     gp.registrar(p1)
-
