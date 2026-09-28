@@ -1,0 +1,123 @@
+def main():
+    gc = GestionClientes()
+    gp = GestionPrestamos()
+    cargar_datos(gc, gp)
+
+    while True:
+        print("")
+        print("SISTEMA DE PRESTAMOS")
+        print("1. Registrar cliente")
+        print("2. Listar clientes")
+        print("3. Solicitar prestamo")
+        print("4. Ver cronograma")
+        print("5. Pagar cuota")
+        print("6. Probar metodos")
+        print("7. Salir")
+        op = input("Opcion: ")
+
+        try:
+            if op == "1":
+                tipo = input("Tipo (1 Natural / 2 Juridico): ")
+                cod = input("ID (ej C003): ")
+                nom = input("Nombre: ")
+                ema = input("Email: ")
+                tel = input("Telefono: ")
+                dire = input("Direccion: ")
+                if tipo == "1":
+                    dni = input("DNI: ")
+                    ing = float(input("Ingresos: "))
+                    cli = ClienteNatural(cod, nom, ema, tel, dire, dni, ing)
+                else:
+                    ruc = input("RUC: ")
+                    rep = input("Representante: ")
+                    cli = ClienteJuridico(cod, nom, ema, tel, dire, ruc, rep)
+                gc.registrar(cli)
+                print("Cliente registrado: " + str(cli))
+
+            elif op == "2":
+                for c in gc.listar():
+                    
+                    print("[" + c.__class__.__name__ + "] " + str(c) + " | " + repr(c))
+
+            elif op == "3":
+                idc = input("ID cliente: ")
+                cli = gc.buscar_por_id(idc)
+                if cli is None:
+                    print("No existe cliente con ese ID.")
+                    continue
+                cod = input("Codigo prestamo (ej P002): ")
+                monto = float(input("Monto: "))
+                plazo = int(input("Plazo meses: "))
+                tea = float(input("TEA %: "))
+                tp = input("Tipo (1 Personal / 2 Vehicular): ")
+                if tp == "1":
+                    seg = float(input("Seguro %: "))
+                    pres = PrestamoPersonal(cod, cli, monto, plazo, tea, seg)
+                else:
+                    sf = float(input("Seguro fijo mensual: "))
+                    mod = input("Modelo: ")
+                    pres = PrestamoVehicular(cod, cli, monto, plazo, tea, sf, mod)
+                score = int(input("Score (300-850): "))
+                ev = EvaluacionCrediticia("EV01", cli, score)
+                if ev.evaluar():
+                    pres.cambiar_estado("APROBADO")
+                    pres.generar_cronograma()
+                    gp.registrar(pres)
+                    print("APROBADO. Cuota: S/ " + str(pres.calcular_cuota()))
+                else:
+                    pres.cambiar_estado("RECHAZADO")
+                    print("RECHAZADO por score bajo.")
+
+            elif op == "4":
+                cod = input("Codigo prestamo: ")
+                pres = gp.buscar_por_codigo(cod)
+                if pres is None:
+                    print("No existe ese prestamo.")
+                    continue
+               
+                print(str(pres) + " | Tipo: " + pres.__class__.__name__)
+                for cu in pres.cuotas:
+                    print(str(cu))
+
+            elif op == "5":
+                cod = input("Codigo prestamo: ")
+                pres = gp.buscar_por_codigo(cod)
+                if pres is None:
+                    print("No existe ese prestamo.")
+                    continue
+                num = int(input("Numero cuota: "))
+                encontrada = None
+                for cu in pres.cuotas:
+                    if cu.numero == num:
+                        encontrada = cu
+                if encontrada is None:
+                    print("Cuota no valida.")
+                elif encontrada.pagada:
+                    print("Ya esta pagada.")
+                else:
+                    monto = float(input("Monto a pagar (Cuota S/ " + str(encontrada.monto) + "): "))
+                    pg = Pago("PAG01", "2026-01-15", monto, "Efectivo", encontrada)
+                    if pg.procesar():
+                        print("Pago OK.")
+                    else:
+                        print("Monto menor a la cuota.")
+
+            elif op == "6":
+                probar_metodos()
+
+            elif op == "7":
+                print("Gracias por usar el sistema.")
+                break
+            else:
+                print("Opcion no valida.")
+
+        except ValueError as e:
+            print("[Error de dato]: " + str(e))
+        except Exception as e:
+            print("[Error]: " + str(e))
+
+
+if __name__ == "__main__":
+    main()
+
+              
