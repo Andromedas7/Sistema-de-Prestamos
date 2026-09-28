@@ -263,7 +263,7 @@ def main():
                     pres = PrestamoVehicular(cod, cli, monto, plazo, tea, sf, mod)
                 score = int(input("Score (300-850): "))
                 ev = EvaluacionCrediticia("EV01", cli, score)
-                if ev.evaluar():
+                if ev.evaluar()
                     pres.cambiar_estado("APROBADO")
                     pres.generar_cronograma()
                     gp.registrar(pres)
@@ -319,6 +319,101 @@ def main():
             print("[Error de dato]: " + str(e))
         except Exception as e:
             print("[Error]: " + str(e))
+ class Pago(object):
+    def __init__(self, id_pago, fecha, monto, medio, cuota):
+        if monto <= 0:
+            raise ValueError("El monto a pagar debe ser mayor a cero.")
+        self.id_pago = id_pago
+        self.fecha = fecha
+        self.monto = monto
+        self.medio = medio
+        self.cuota = cuota
+
+    def procesar(self):
+        if self.monto >= self.cuota.monto:
+            self.cuota.marcar_pagada()
+            return True
+        return False
+
+    def __str__(self):
+        return "Pago " + str(self.id_pago) + " | S/ " + str(self.monto) + " | " + str(self.medio)
+
+
+# PRESTAMOS 
+
+class Prestamo(object):
+    def __init__(self, codigo, cliente, monto, plazo, tea):
+        if monto <= 0:
+            raise ValueError("El monto debe ser mayor a cero.")
+        if plazo <= 0:
+            raise ValueError("El plazo debe ser mayor a cero.")
+        self.codigo = codigo
+        self.cliente = cliente
+        self.monto = monto
+        self.plazo = plazo
+        self.tea = tea
+        self.estado = "PENDIENTE"
+        self.cuotas = []
+
+    def cambiar_estado(self, nuevo_estado):
+        self.estado = nuevo_estado
+
+    def agregar_cuota(self, cuota):
+        self.cuotas.append(cuota)
+
+    def calcular_cuota(self):
+        tem = (1 + self.tea / 100) ** (1.0 / 12) - 1
+        if tem == 0:
+            return round(self.monto / self.plazo, 2)
+        cuota = (self.monto * tem) / (1 - (1 + tem) ** (-self.plazo))
+        return round(cuota, 2)
+
+    def generar_cronograma(self):
+        self.cuotas = []
+        cuota_valor = self.calcular_cuota()
+        tem = (1 + self.tea / 100) ** (1.0 / 12) - 1
+        saldo = self.monto
+        for i in range(1, self.plazo + 1):
+            interes = saldo * tem
+            amort = cuota_valor - interes
+            saldo = saldo - amort
+            fecha = "2026-" + str((i % 12) + 1).zfill(2) + "-15"
+            c = Cuota(i, cuota_valor, interes, amort, fecha)
+            self.cuotas.append(c)
+        return self.cuotas
+
+    def __str__(self):
+        return "Prestamo " + str(self.codigo) + " | " + str(self.cliente.nombre) + " | S/ " + str(self.monto) + " | " + str(self.estado)
+
+    def __eq__(self, otro):
+        if not isinstance(otro, Prestamo):
+            return False
+        return self.codigo == otro.codigo
+
+    def __hash__(self):
+        return hash(self.codigo)
+
+
+class PrestamoPersonal(Prestamo):
+    def __init__(self, codigo, cliente, monto, plazo, tea, seguro_pct):
+        Prestamo.__init__(self, codigo, cliente, monto, plazo, tea)
+        self.seguro_pct = seguro_pct
+
+    def calcular_cuota(self):
+        base = Prestamo.calcular_cuota(self)
+        seguro = self.monto * (self.seguro_pct / 100)
+        return round(base + seguro, 2)
+
+
+class PrestamoVehicular(Prestamo):
+    def __init__(self, codigo, cliente, monto, plazo, tea, seguro_fijo, modelo):
+        Prestamo.__init__(self, codigo, cliente, monto, plazo, tea)
+        self.seguro_fijo = seguro_fijo
+        self.modelo = modelo
+
+    def calcular_cuota(self):
+        base = Prestamo.calcular_cuota(self)
+        return round(base + self.seguro_fijo, 2)
 
 
 if __name__ == "__main__":
